@@ -1,0 +1,158 @@
+\documentclass{article}%
+
+\usepackage[14pt]{extsizes}%
+\usepackage[left=3.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm,footskip=10mm]{geometry}%
+
+\usepackage{cmap}%
+\usepackage[T1,T2A]{fontenc}%
+\usepackage[utf8]{inputenc}%
+\usepackage{csquotes}%
+\usepackage[russian]{babel}%
+
+\usepackage{amsmath, amsfonts, amssymb, mathtools, systeme}%
+\usepackage{graphicx, float}%
+\usepackage{caption}%
+\usepackage{setspace}%
+\usepackage{array}%
+\usepackage{booktabs}%
+
+\usepackage{tikz}%
+\usepackage{pgfplots}%
+
+% вычисление значения в точке
+\newcommand\at[2]{\left.#1\right|_{#2}}
+
+\numberwithin{equation}{subsection}
+
+\let\oldsection\section% Store \section
+\renewcommand{\section}{% Update \section
+  \renewcommand{\theequation}{\thesection.\arabic{equation}}% Update equation number
+  \oldsection}% Regular \section
+\let\oldsubsection\subsection% Store \subsection
+\renewcommand{\subsection}{% Update \subsection
+  \renewcommand{\theequation}{\thesubsection.\arabic{equation}}% Update equation number
+  \oldsubsection}% Regular \subsection
+
+\begin{document}
+\section{Динамика СВП}
+Исходная система уравнений, описывающая динамику СВП:
+\begin{equation}
+\begin{gathered}
+    m\dfrac{d^2H}{dt^2}=pS-mg\\
+    \dfrac{dp}{dt}=\dfrac{np_a}{W}\left(Q_{in} - Q_{out} -\dfrac{dW}{dt}\right)\\
+    I_z\dfrac{d^2\varphi}{dt^2}=pS\cdot l_{AC}
+\end{gathered}
+\label{eq:1.1}
+\end{equation}
+
+\section{Расходно напорная характеристика}
+\begin{table}[h]
+    \caption{Исходные параметры центробежного нагнетателя, округленные до целой части. Точные параметры можно найти в {\it initials.xlsx}}
+    \centering
+    \begin{tabular}{@{}l*{10}{l}@{}}
+        \toprule
+        $p$, Па & 2809 & 2965 & 2902 & 2715 & 2497 & 2325 & 2060 & 1280 & 593 \\
+        \midrule
+        $Q, \frac{\text{м}^3}{\text{c}}$ & 0 & 6 & 11 & 17 & 22 & 25 & 28 & 34 & 38 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+\begin{figure}[H]
+    \centering
+    \input{graph_tikz.tex}
+    \caption{Расходно напорная характеристика $p(Q_{in})$. Аппроксимация МНК квадратичной функцией $f(x)=-2.756x^2 + 48.46x + 2771$.}
+\end{figure}
+Для выполнения условия устойчивости судна в предположении отсутсвия волнения, необходимо:
+\begin{equation}
+    \dfrac{1}{2}Q_0 - \at{\dfrac{\partial Q}{\partial p}}{0}p_0 > 0, \text{ где } (Q_0, p_0) \text{ точка на нисходящей ветви РНХ}
+\end{equation} 
+Преобразуем $p(Q_{in})$ для получения функции $Q_{in}(p)$, решив уравнение $f(x)=p$ и выбрав решения на нисходящей ветке. Получим:
+\begin{equation}
+    Q_{in}(p)=\dfrac{-B-\sqrt{B^2-4A(C-p)}}{2A}, \text{ где } A, B, C \text{ из } f(x)
+\end{equation}
+Объмный расход воздуха $Q_{out}$, вытекающего из зоны ВП, может быть вычислено слующим образом:
+\begin{equation}
+    Q_{out}=Q_{out}(p, S_{gap})=\chi\sqrt{\dfrac{2p}{\rho}}S_{gap}
+\end{equation}
+Объмный расход воздуха $Q_{in}$, нагнетаемого вентиляторами в зону ВП, вычисляется с помощью РНХ вентилятора:
+\begin{equation}
+    Q_{in}=Q_{in}(p)
+\end{equation}
+
+\section{Симуляция}
+Преобразуем \ref{eq:1.1}, заменив дифференциальные уравнения второго порядка уравнениями первого порядка. Также, допишем уравнение, описывающее изменение объема ВП:
+\begin{equation}
+\begin{gathered}
+    \dfrac{dV}{dt}=\dfrac{pS-mg}{m}\\
+    \dfrac{dH}{dt} = V\\
+    \dfrac{dW}{dt}=S\dfrac{dH}{dt}+S\cdot l_{AC}\dfrac{d\varphi}{dt}\\
+    \dfrac{dp}{dt}=\dfrac{np_a}{W}\left(Q_{in} - Q_{out} -\dfrac{dW}{dt}\right)\\
+    \dfrac{dV_{\varphi}}{dt}=\dfrac{pS\cdot l_{AC}}{I_z}\\
+    \dfrac{d\varphi}{dt} = V_{\varphi}
+\end{gathered}
+\end{equation}
+
+\subsection{Шаг симуляции}
+В качестве метода численного интегрирования выбран метод {\it Рунге-Кутты четвертого порядка} в следующей формулировке:
+\newline\par
+Рассмотрим задачу Коши для системы обыкновенных дифференциальных уравнений первого порядка (далееий первого порядка (далее $\mathbf{y}, \mathbf{f}, \mathbf{k}_i \in \mathcal{R}^n, x, h \in \mathcal{R}^1$)
+\begin{equation}
+    \mathbf{y}'=\mathbf{f}(x, \mathbf{y}), \quad \mathbf{y}(x_0)=\mathbf{y}_0
+\end{equation}
+Тогда приближенное значение в последующих точдках вычисляется по итерационной формуле:
+\begin{equation}
+    \mathbf{y}_{n+1}=\mathbf{y}_n + \dfrac{h}{6}(\mathbf{k}_1 + 2\mathbf{k}_2 + 2\mathbf{k}_3 + \mathbf{k}_4)
+\end{equation}
+Вычисление нового значения происходит в четыре стадии:
+\begin{equation}
+\begin{gathered}
+    \mathbf{k}_1 = \mathbf{f}(x_n, \mathbf{y}_n)\\
+    \mathbf{k}_2 = \mathbf{f}(x_n + \dfrac{h}{2}, \mathbf{y}_n + \dfrac{h}{2}\mathbf{k}_1)\\
+    \mathbf{k}_3 = \mathbf{f}(x_n + \dfrac{h}{2}, \mathbf{y}_n + \dfrac{h}{2}\mathbf{k}_2)\\
+    \mathbf{k}_4 = \mathbf{f}(x_n + h, \mathbf{y}_n + h\mathbf{k}_3)
+\end{gathered}
+\end{equation}
+
+\subsection{Начальные условия}
+В симуляции используются следующие начальные условия:
+\begin{table}[h]
+    \caption{Значения физических величин до первого шага симуляции}
+    \centering
+    \begin{tabular}{@{}llcc@{}}
+        \toprule
+        обозначение & величина & значение & СИ\\
+        \midrule
+        $A$ & коэффициент $f(x)$ & -2.756 & -\\
+        \midrule
+        $B$ & коэффициент $f(x)$ & 48.46 & -\\
+        \midrule
+        $C$ & коэффициент $f(x)$ & 2771 & -\\
+        \midrule
+        $a$ & длина ВП & 15 & м\\
+        \midrule
+        $b$ & ширина ВП & 6 & м\\
+        \midrule
+        $S$ & площадь ВП & $ab=90$ & $\text{м}^2$\\
+        \midrule
+        $d$ & клиренс ВП & 0.7 & м\\
+        \midrule
+        $W$ & объем ВП & $Sd=63$ & $\text{м}^3$\\
+        \midrule
+        $I_z$ & момент инерции & $2.5\cdot 10^5$ & $\text{кг}\cdot\text{м}^2$\\
+        \midrule
+        $S_{gap}$ & площадь истечения & 0.012 & $\text{м}^2$\\
+        \midrule
+        $g$ & ускорение св. падения & 9.8 & $\text{м}/\text{с}^2$\\
+        \midrule
+        $n$ & показатель политропы & 1.4 & -\\
+        \midrule
+        $\chi$ & коэффициент истечения & 1 & -\\
+        \midrule
+        $p_a$ & атмосферное давление & $10^5$ & Па\\
+        \midrule
+        $\rho$ & плотность воздуха & $1.269$ & $\text{кг}/\text{м}^3$\\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\end{document}%

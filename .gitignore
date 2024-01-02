@@ -1,0 +1,13 @@
+# vscode local settings
+.vscode
+
+# python virtual env
+.venv
+
+# latex env
+paper/*
+!paper/*.tex
+!paper/*.pdf
+
+# cpp build dir
+build
