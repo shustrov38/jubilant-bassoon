@@ -15,7 +15,7 @@ inline double constexpr eps = 1e-6; // маленькое число
 
 namespace ACV {
 inline double constexpr m = 16000; // масса
-inline double constexpr l = 1; // расстояние от центра давления до центра тяжести, вдоль OX
+inline double constexpr l = 0; // расстояние от центра давления до центра тяжести, вдоль OX
 inline double constexpr a = 15; // длина воздушной подушки
 inline double constexpr b = 6; // ширина воздушной подушки
 inline double constexpr d = 0.7; // высота воздушной подушки
@@ -52,7 +52,7 @@ private:
     static double constexpr lo = 0.0;
     static double constexpr hi = A * Qtop * Qtop + B * Qtop + C;
 
-    static double constexpr Sgap = 0.012;
+    static double constexpr Sgap = 0.42;
 };
 
 namespace RK4 {
@@ -113,12 +113,12 @@ std::ostream& operator <<(std::ostream& out, Derivative const& deriv)
 #define SETW std::setw(numberWidth)
     out << std::fixed << std::setprecision(3);
     out << "Deriv[";
-    out << "V=" << SETW << deriv.dV << ", ";
-    out << "H=" << SETW << deriv.dH << ", ";
-    out << "W=" << SETW << deriv.dW << ", ";
-    out << "p=" << SETW << deriv.dp << ", ";
-    out << "Vphi=" << SETW << deriv.dVphi << ", ";
-    out << "phi=" << SETW << deriv.dphi;
+    out << "dV=" << SETW << deriv.dV << ", ";
+    out << "dH=" << SETW << deriv.dH << ", ";
+    out << "dW=" << SETW << deriv.dW << ", ";
+    out << "dp=" << SETW << deriv.dp << ", ";
+    out << "dVphi=" << SETW << deriv.dVphi << ", ";
+    out << "dphi=" << SETW << deriv.dphi;
     out << "]";
 #undef SETW
     return out;
@@ -228,25 +228,34 @@ int main(int argc, char** argv)
     fout << csv::csv << stateHeader;
 
     RK4::State state;
+    state.H = ACV::d / 2 + 0.3;
     state.W = ACV::S * ACV::d / 2;
+    state.p = 1000.0;
+
+    double const Tmax = 50;
 
     double const dt = 0.05;
     RK4::Derivative deriv;
-    for (double t = 0.0; t < 5; t += dt) {
+    for (double t = 0.0; t < Tmax; t += dt) {
         deriv.dV = (state.p * ACV::S - ACV::m * globals::g) / ACV::m;
         deriv.dH = state.V;
         deriv.dVphi = state.p * ACV::S * ACV::l / ACV::Iz;
         deriv.dphi = state.Vphi;
         deriv.dW = ACV::S * deriv.dH + ACV::S * ACV::l * deriv.dphi;
         deriv.dp = globals::n * globals::pa * (Compressor::Qin(state.p) - Compressor::Qout(state.p) - deriv.dW) / state.W;
-        
+        std::cout << deriv << '\n';
+
         state.V += deriv.dV * dt;
         state.H += deriv.dH * dt;
         state.W += deriv.dW * dt;
         state.p += deriv.dp * dt;
         state.Vphi += deriv.dVphi * dt;
         state.phi += deriv.dphi * dt;
+        
         state.p = Compressor::Clamp(state.p);
+        // state.H = std::clamp(state.H, ACV::d / 2 + 0.3, 1000.0);
+        // state.W = std::clamp(state.W, 0.0, ACV::S * ACV::d);
+
         fout << csv::csv << state;
     }
 

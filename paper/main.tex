@@ -38,9 +38,9 @@
 Исходная система уравнений, описывающая динамику СВП:
 \begin{equation}
 \begin{gathered}
-    m\dfrac{d^2H}{dt^2}=pS-mg\\
+    m\dfrac{d^2H}{dt^2}=\mathbf{F}\\
     \dfrac{dp}{dt}=\dfrac{np_a}{W}\left(Q_{in} - Q_{out} -\dfrac{dW}{dt}\right)\\
-    I_z\dfrac{d^2\varphi}{dt^2}=pS\cdot l_{AC}
+    I_z\dfrac{d^2\varphi}{dt^2}=\mathbf{M}
 \end{gathered}
 \label{eq:1.1}
 \end{equation}
@@ -59,7 +59,7 @@
 \end{table}
 \begin{figure}[H]
     \centering
-    \input{graph_tikz.tex}
+    \input{graph1_tikz.tex}
     \caption{Расходно напорная характеристика $p(Q_{in})$. Аппроксимация МНК квадратичной функцией $f(q)=-2.756q^2 + 48.46q + 2771$.}
 \end{figure}
 Для выполнения условия устойчивости судна в предположении отсутсвия волнения, необходимо:
@@ -72,22 +72,86 @@
 \end{equation}
 Объмный расход воздуха $Q_{out}$, вытекающего из зоны ВП, может быть вычислено слующим образом:
 \begin{equation}
-    Q_{out}=Q_{out}(p, S_{gap})=\chi\sqrt{\dfrac{2p}{\rho}}S_{gap}
+    Q_{out}=Q_{out}(p, S_{gap})=\chi\sqrt{\dfrac{2p}{\rho_{a}}}S_{gap}
 \end{equation}
 Объмный расход воздуха $Q_{in}$, нагнетаемого вентиляторами в зону ВП, вычисляется с помощью РНХ вентилятора:
 \begin{equation}
     Q_{in}=Q_{in}(p)
 \end{equation}
+\begin{figure}[H]
+    \centering
+    \input{graph2_tikz.tex}
+    \caption{Расходно напорная характеристика $Q_{in}(p)$ и истечение $Q_{out}(p, S_{gap})$ при высоте зазора в 1 см.}
+\end{figure}
+
+\section{Удары волн о корпус}
+Для учета удар волн о корпус будем использовать {\it метод плоских поперечных сечений}. Для этого необходимо разбить корпус на $N$ сечений (чем больше $N$, тем точнее будут вычисления). Тогда расстояние между сечениями:
+\begin{equation}
+    d_L = \dfrac{L}{N}
+\end{equation}
+Для каждого сечения необходимо вычислить положение свободной поверхности $y$. На данном этапе $y=0$. Если в каком то из сечений вода касается корпуса судна ($y>0$), то пятно контакта имеет площадь:
+\begin{equation}
+    S_{wash} = S_{wash}(d_L) = d_L \cdot b
+\end{equation}
+Тогда сила, действующая на пятно контакта, определяется как:
+\begin{equation}
+    F_{contact} = \theta\cdot\rho_{w} \dfrac{V^2}{2}S_{wash}, \text{ где } V = \sqrt{V_x^2 + V_y^2}
+\end{equation}
+Таким образом получим выражение для полной силы, которую оказывает удар волны:
+\begin{equation}
+    F_{wave} = \int\limits_{\mathcal{R}_{+}^{1}}F_{contact}\,\mathrm{d}d_L
+\end{equation}
+Также необходимо вычислить момент вращения судна под влиянием удара волны о корпус:
+\begin{equation}
+    M_{contact} = \int\limits_{0}^{L}\int\limits_{\mathcal{R}_{+}^{1}} d_{segment} \cdot F_{contact}\,\mathrm{d}d_L\mathrm{d}x
+\end{equation}
+где $d_{segment}$ - знаковое расстояние от центра тяжести до конкретного сечения.
+\begin{equation}
+    d_{segment}(x) = x - \dfrac{L}{2}
+\end{equation}
+если $d_{segment} > 0$, то сечение находится в носовой части судна относительно центра тяжести, а при $d_{segment} < 0$ в кормовой.
+
+\subsection{Влияние на объем ВП и площадь зазора}
+Объем ВП под действием волны $y(x)$ вычисляется сделующим образом:
+\begin{equation}
+    W_{shaped} = \int\limits_{x_c + 0}^{x_c + L}\int\limits_{\mathcal{R}_{+}^{1}}S_{wash}\left[H - y(x)\right]\,\mathrm{d}d_L\mathrm{d}x
+\end{equation}
+где $x_c$ - координата центра тяжести судна по оси $OX$, а $H-y(x)$ высота свободного пространства в сечении. Для облегчения задания площади зазора введем следующий индикатор:
+\begin{equation}
+    I(x) = 
+    \begin{cases*}
+        0.01, &H-d > y(x)\\
+        0,&\text{иначе}
+    \end{cases*}
+\end{equation}
+Индикатор $I(x)$ равен зазору в 1 см, когда нижняя часть ВП (центр тяжести $H$ минус клиренс судна $d$) находится выше волны $y(x)$. Тогда площадь зазора определяется следующим образом:
+\begin{equation}
+    S_{gap} = \int\limits_{x_c + 0}^{x_c + L}\int\limits_{\mathcal{R}_{+}^{1}}d_L \cdot I(x)\,\mathrm{d}d_L\mathrm{d}x
+\end{equation}
 
 \section{Симуляция}
+Распишем $\mathbf{F}$ и $\mathbf{M}$ из \ref{eq:1.1} с учетом знаков:
+\begin{equation}
+\begin{gathered}
+    F = pS - mg + F_{wave}\\
+    M = pS\cdot l_{AC} + M_{contact}
+\end{gathered}
+\end{equation}
+Также запишем уравнение, описывающее изменение объема ВП с учетом того, что волна может занимать часть объема ВП:
+\begin{equation}
+    \dfrac{dW}{dt}=S\dfrac{dH}{dt}+S\cdot l_{AC}\dfrac{d\varphi}{dt}-\dfrac{d(W-W_{shaped})}{dt}\\
+    \label{eq:4.2}
+\end{equation}
+Последнее слагаемое в \ref{eq:4.2} описывает скорость изменения объема волны в ВП ($W_{wave} = W - W_{shaped}$).
+\newline
 Преобразуем \ref{eq:1.1}, заменив дифференциальные уравнения второго порядка уравнениями первого порядка. Также, допишем уравнение, описывающее изменение объема ВП:
 \begin{equation}
 \begin{gathered}
-    \dfrac{dV}{dt}=\dfrac{pS-mg}{m}\\
-    \dfrac{dH}{dt} = V\\
-    \dfrac{dW}{dt}=S\dfrac{dH}{dt}+S\cdot l_{AC}\dfrac{d\varphi}{dt}\\
+    \dfrac{dV_y}{dt}=\dfrac{pS-mg+F_{wave}}{m}\\
+    \dfrac{dH}{dt} = V_y\\
+    \dfrac{dW}{dt}=S\dfrac{dH}{dt}+S\cdot l_{AC}\dfrac{d\varphi}{dt}-\dfrac{d(W-W_{shaped})}{dt}\\
     \dfrac{dp}{dt}=\dfrac{np_a}{W}\left(Q_{in} - Q_{out} -\dfrac{dW}{dt}\right)\\
-    \dfrac{dV_{\varphi}}{dt}=\dfrac{pS\cdot l_{AC}}{I_z}\\
+    \dfrac{dV_{\varphi}}{dt}=\dfrac{pS\cdot l_{AC} + M_{contact}}{I_z}\\
     \dfrac{d\varphi}{dt} = V_{\varphi}
 \end{gathered}
 \end{equation}
@@ -113,60 +177,62 @@
 \end{gathered}
 \end{equation}
 
-\subsection{Начальные условия}
-В симуляции используются начальные значения из таблицы \ref{tab:2}. Предполагается, что в самом начале симуляции ВП отсутствует и только начинает наполняться воздухом.
+% \subsection{Начальные условия}
+% В симуляции используются начальные значения из таблицы \ref{tab:2}. Предполагается, что в самом начале симуляции ВП отсутствует и только начинает наполняться воздухом.
 
-\begin{table}[h]
-    \caption{Значения физических величин до первого шага симуляции}
-    \centering
-    \begin{tabular}{@{}llcc@{}}
-        \toprule
-        обозначение & величина & значение & СИ\\
-        \midrule
-        $A$ & коэффициент $f(q)$ & -2.756 & -\\
-        \midrule
-        $B$ & коэффициент $f(q)$ & 48.46 & -\\
-        \midrule
-        $C$ & коэффициент $f(q)$ & 2771 & -\\
-        \midrule
-        $a$ & длина ВП & 15 & м\\
-        \midrule
-        $b$ & ширина ВП & 6 & м\\
-        \midrule
-        $S$ & площадь ВП & $ab=90$ & $\text{м}^2$\\
-        \midrule
-        $d_{max}$ & максимальный клиренс ВП & 0.7 & м\\
-        \midrule
-        $d$ & текущий клиренс ВП & 0 & м\\
-        \midrule
-        $W$ & объем ВП & $Sd=0$ & $\text{м}^3$\\
-        \midrule
-        $I_z$ & момент инерции & $2.5\cdot 10^5$ & $\text{кг}\cdot\text{м}^2$\\
-        \midrule
-        $S_{gap}$ & площадь истечения & 0.012 & $\text{м}^2$\\
-        \midrule
-        $g$ & ускорение св. падения & 9.8 & $\text{м}/\text{с}^2$\\
-        \midrule
-        $n$ & показатель политропы & 1.4 & -\\
-        \midrule
-        $\chi$ & коэффициент истечения & 1 & -\\
-        \midrule
-        $p_a$ & атмосферное давление & $10^5$ & Па\\
-        \midrule
-        $\rho$ & плотность воздуха & $1.269$ & $\text{кг}/\text{м}^3$\\
-        \midrule
-        $l_{AC}$ & расстояние ... & 1 & м\\
-        \midrule
-        $H$ & вертикальная коорд. ц.т. судна & 0 & м\\
-        \midrule
-        $\varphi$ & тангаж & 0 & рад \\
-        \midrule
-        $m$ & масса судна & $1.6\cdot 10^4$ & кг\\
-        \midrule
-        $p$ & избыточное давление ВП & 0 & Па\\
-        \bottomrule
-    \end{tabular}
-    \label{tab:2}
-\end{table}
+% \begin{table}[h]
+%     \caption{Значения физических величин до первого шага симуляции}
+%     \centering
+%     \begin{tabular}{@{}llcc@{}}
+%         \toprule
+%         обозначение & величина & значение & СИ\\
+%         \midrule
+%         $A$ & коэффициент $f(q)$ & -2.756 & -\\
+%         \midrule
+%         $B$ & коэффициент $f(q)$ & 48.46 & -\\
+%         \midrule
+%         $C$ & коэффициент $f(q)$ & 2771 & -\\
+%         \midrule
+%         $L$ & длина ВП & 15 & м\\
+%         \midrule
+%         $b$ & ширина ВП & 6 & м\\
+%         \midrule
+%         $S$ & площадь ВП & $Lb=90$ & $\text{м}^2$\\
+%         \midrule
+%         $d_{max}$ & максимальный клиренс ВП & 0.7 & м\\
+%         \midrule
+%         $d$ & текущий клиренс ВП & 0 & м\\
+%         \midrule
+%         $W$ & объем ВП & $Sd=0$ & $\text{м}^3$\\
+%         \midrule
+%         $I_z$ & момент инерции & $2.5\cdot 10^5$ & $\text{кг}\cdot\text{м}^2$\\
+%         \midrule
+%         $d_{gap}$ & высота зазора & 0.01 & м\\
+%         \midrule
+%         $S_{gap}$ & площадь истечения & $ab\cdot d_{gap}=0.42$ & $\text{м}^2$\\
+%         \midrule
+%         $g$ & ускорение св. падения & 9.8 & $\text{м}/\text{с}^2$\\
+%         \midrule
+%         $n$ & показатель политропы & 1.4 & -\\
+%         \midrule
+%         $\chi$ & коэффициент истечения & 1 & -\\
+%         \midrule
+%         $p_a$ & атмосферное давление & $10^5$ & Па\\
+%         \midrule
+%         $\rho_{a}$ & плотность воздуха & $1.269$ & $\text{кг}/\text{м}^3$\\
+%         \midrule
+%         $l_{AC}$ & расстояние ... & 0 & м\\
+%         \midrule
+%         $H$ & вертикальная коорд. ц.т. судна & 0.7 & м\\
+%         \midrule
+%         $\varphi$ & тангаж & 0 & рад \\
+%         \midrule
+%         $m$ & масса судна & $1.6\cdot 10^4$ & кг\\
+%         \midrule
+%         $p$ & избыточное давление ВП & 0 & Па\\
+%         \bottomrule
+%     \end{tabular}
+%     \label{tab:2}
+% \end{table}
 
 \end{document}%
