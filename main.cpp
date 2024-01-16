@@ -1,265 +1,228 @@
 #include <cmath>
+#include <array>
+#include <tuple>
 #include <vector>
 #include <fstream>
+#include <cassert>
 #include <iomanip>
 #include <iostream>
+
+#define SQ(x) (x) * (x)
+
+struct Vector {
+    double x;
+    double y;
+    double z;
+};
+
+Vector& operator +=(Vector &lhs, Vector const& rhs)
+{
+    lhs.x += rhs.x;
+    lhs.y += rhs.y;
+    lhs.z += rhs.z;
+    return lhs;
+}
+
+Vector operator +(Vector lhs, Vector const& rhs)
+{
+    return lhs += rhs;
+}
 
 namespace globals {
 inline double constexpr g = 9.8; // ускорение свободного падения 
 inline double constexpr n = 1.4; // показатель политропы
 inline double constexpr chi = 1; // коэффициент истечения
-inline double constexpr pa = 1e5; // атмосферное давление
-inline double constexpr rho = 1.2690; // плотность воздуха
-inline double constexpr eps = 1e-6; // маленькое число
-} // namespace Globals
+inline double constexpr p_a = 1e5; // атмосферное давление
+inline double constexpr rho_a = 1.2690; // плотность воздуха
+inline double constexpr rho_w = 1000.0; // плотность воды
+} // namespace globals
 
-namespace ACV {
-inline double constexpr m = 16000; // масса
-inline double constexpr l = 0; // расстояние от центра давления до центра тяжести, вдоль OX
-inline double constexpr a = 15; // длина воздушной подушки
-inline double constexpr b = 6; // ширина воздушной подушки
-inline double constexpr d = 0.7; // высота воздушной подушки
-inline double constexpr S = a * b; // площадь воздушной подушки
-inline double constexpr Iz = 250000; // момент инерции судна
-} // namespace ACV
-
-class Compressor 
-{
-public:
-    static constexpr double Clamp(double p)
-    {
-        return std::clamp(p, lo, hi);
-    }
-
-    static constexpr double Qin(double p)
-    {
-        // A * Qin * Qin + B * Qin + (C - p) = 0 
-        double const D = B * B - 4 * A * (C - p);
-        return (-B - std::sqrt(D)) / 2 / A;
-    }
-
-    static constexpr double Qout(double p)
-    {
-        return globals::chi * std::sqrt(2 * p / globals::rho) * Sgap;
-    }
-
-private:
-    static double constexpr A = -2.756;
-    static double constexpr B = 48.46;
-    static double constexpr C = 2771;
-
-    static double constexpr Qtop = -B / 2 / A; // вершина квадратичной функции
-    static double constexpr lo = 0.0;
-    static double constexpr hi = A * Qtop * Qtop + B * Qtop + C;
-
-    static double constexpr Sgap = 0.42;
-};
-
-namespace RK4 {
-struct State
-{
-    double V = 0.0; // скорость судна
-    double H = 0.0; // вертикальная координата центра тяжести судна
-    double W = 0.0; // объем воздушной подушки
-    double p = 0.0; // избыточное давление
-    double Vphi = 0.0; // скорость изменения дифферента
-    double phi = 0.0; // диффирент
-};
-
-struct Derivative
-{
-    double dV = 0.0; // скорость судна
-    double dH = 0.0; // вертикальная координата центра тяжести судна
-    double dW = 0.0; // объем воздушной подушки
-    double dp = 0.0; // избыточное давление
-    double dVphi = 0.0; // скорость изменения дифферента
-    double dphi = 0.0; // диффирент
-
-    Derivative() = default;
-
-    Derivative(Derivative d[4])
-        : dV(1.0 / 6.0 * (d[0].dV + 2.0 * (d[1].dV + d[2].dV) + d[3].dV))
-        , dH(1.0 / 6.0 * (d[0].dH + 2.0 * (d[1].dH + d[2].dH) + d[3].dH))
-        , dW(1.0 / 6.0 * (d[0].dW + 2.0 * (d[1].dW + d[2].dW) + d[3].dW))
-        , dp(1.0 / 6.0 * (d[0].dp + 2.0 * (d[1].dp + d[2].dp) + d[3].dp))
-        , dVphi(1.0 / 6.0 * (d[0].dVphi + 2.0 * (d[1].dVphi + d[2].dVphi) + d[3].dVphi))
-        , dphi(1.0 / 6.0 * (d[0].dphi + 2.0 * (d[1].dphi + d[2].dphi) + d[3].dphi))
-    {
-    }
-};
-
-std::ostream& operator <<(std::ostream& out, State const& state)
-{
-    static size_t constexpr numberWidth = 10;
-#define SETW std::setw(numberWidth)
-    out << std::fixed << std::setprecision(3);
-    out << "State[";
-    out << "V=" << SETW << state.V << ", ";
-    out << "H=" << SETW << state.H << ", ";
-    out << "W=" << SETW << state.W << ", ";
-    out << "p=" << SETW << state.p << ", ";
-    out << "Vphi=" << SETW << state.Vphi << ", ";
-    out << "phi=" << SETW << state.phi << ", ";
-    out << "Qin=" << SETW << Compressor::Qin(state.p) << ", ";
-    out << "Qout=" << SETW << Compressor::Qout(state.p);
-    out << "]";
-#undef SETW
-    return out;
+namespace wave {
+constexpr double y(double x) {
+    return 0.0;
 }
-
-std::ostream& operator <<(std::ostream& out, Derivative const& deriv)
-{
-    static size_t constexpr numberWidth = 10;
-#define SETW std::setw(numberWidth)
-    out << std::fixed << std::setprecision(3);
-    out << "Deriv[";
-    out << "dV=" << SETW << deriv.dV << ", ";
-    out << "dH=" << SETW << deriv.dH << ", ";
-    out << "dW=" << SETW << deriv.dW << ", ";
-    out << "dp=" << SETW << deriv.dp << ", ";
-    out << "dVphi=" << SETW << deriv.dVphi << ", ";
-    out << "dphi=" << SETW << deriv.dphi;
-    out << "]";
-#undef SETW
-    return out;
-}
-
-class Integrator
-{
-public:
-    static void Integrate(State &state, double dt) {
-        Derivative d[4];
-        d[0] = Eval(state, 0.0, {});
-        d[1] = Eval(state, 0.5 * dt, d[0]);
-        d[2] = Eval(state, 0.5 * dt, d[1]);
-        d[3] = Eval(state, dt, d[2]);
-        Derivative comb(d);
-
-        state.V = state.V + comb.dV * dt;
-        state.H = state.H + comb.dH * dt;
-        state.W = state.W + comb.dW * dt;
-        state.p = state.p + comb.dp * dt;
-        state.Vphi = state.Vphi + comb.dVphi * dt;
-        state.phi = state.phi + comb.dphi * dt;
-    
-        std::cout << state << '\n';
-        std::cout << comb << '\n';
-        std::cout << '\n';
-    }
-
-private:
-    static Derivative Eval(State const& initial, double dt, Derivative const& d)
-    {
-        State state;
-        state.V = initial.V + d.dV * dt;
-        state.H = initial.H + d.dH * dt;
-        state.W = initial.W + d.dW * dt;
-        state.p = initial.p + d.dp * dt;
-        state.Vphi = initial.Vphi + d.dVphi * dt;
-        state.phi = initial.phi + d.dphi * dt;
-
-        Derivative output;
-        output.dV = (state.p * ACV::S - ACV::m * globals::g) / ACV::m;
-        output.dH = state.V;
-        output.dVphi = state.p * ACV::S * ACV::l / ACV::Iz;
-        output.dphi = state.Vphi;
-        output.dW = ACV::S * output.dH + ACV::S * ACV::l * output.dphi;
-        output.dp = globals::n * globals::pa * (Compressor::Qin(state.p) - Compressor::Qout(state.p) - output.dW) / state.W;
-        return output;
-    }
 };
-} // namespace RK4
 
-namespace csv {
-class csv_proxy
-{
-public:
-    explicit csv_proxy(std::ostream& out)
-        : mOut(out)
-    {
-    }
+struct ACV {
+    static double constexpr m = 16000; // масса
+    static double constexpr l_AC = 0; // расстояние от центра давления до центра тяжести, вдоль OX
+    static double constexpr L = 15; // длина воздушной подушки
+    static double constexpr b = 6; // ширина воздушной подушки
+    static double constexpr d_max = 0.7; // максимальная высота воздушной подушки
+    static double constexpr S = L * b; // площадь воздушной подушки
+    static double constexpr I_z = 250000; // момент инерции судна
 
-    template<typename T>
-    friend std::ostream& operator <<(csv_proxy const& proxy, T const& o)
-    {
-        return proxy.mOut << o;
-    }
+    static double constexpr V_x = 2; // постоянная скорость буксира
 
-    friend std::ostream& operator <<(csv_proxy const& proxy, RK4::State const& state)
-    {
-        proxy.mOut << state.V << ",";
-        proxy.mOut << state.H << ",";
-        proxy.mOut << state.W << ",";
-        proxy.mOut << state.p << ",";
-        proxy.mOut << state.Vphi << ",";
-        proxy.mOut << state.phi << ",";
-        proxy.mOut << Compressor::Qin(state.p) << ",";
-        proxy.mOut << Compressor::Qout(state.p);
-        return proxy.mOut << '\n';
-    }
+    static int    constexpr N = 10; // количество сечений ВП
+    static double constexpr delta_L = L / N; // ширина сечения ВП
 
-    friend std::ostream& operator <<(csv_proxy const& proxy, std::vector<std::string> const& line)
-    {
-        if (!line.empty()) {
-            for (size_t i = 0; i < line.size() - 1; ++i) {
-                proxy.mOut << line[i] << ',';
-            }
-            proxy.mOut << line.back();
+    struct Segment {
+        double x; // знаковое смещение сегмента относительно центра тяжести судна
+
+        Vector c; // координата верхней части сегмента ВП
+        double W; // объем сечения
+
+        Vector V; // вектор скорости
+        Vector w; // вектор угловой скорости
+
+        double d; // высота столба воздуха в сегменте
+
+        double S_wash; // пятно контакта
+        double V_scalar; // скорость сегмента
+        double F_contact; // сила действующая на пятно контакта 
+        double M_contact; // момент силы действующей на пятно контакта
+
+        double S_gap; // ширина зазора в сегменте
+
+        Segment() = default;
+
+        explicit Segment(int index, double W)
+            : W(W)
+            , x(L / 2 - delta_L * (index - 0.5))
+        {
         }
-        return proxy.mOut << '\n';
+
+        constexpr void UpdateParams(Vector const& new_c, Vector const& new_V, Vector const& new_w)
+        {
+            c = new_c;
+            c.x += x; // применить смещение
+            V = new_V;
+            w = new_w;
+            UpdateState();
+        }
+
+        constexpr void UpdateState()
+        {
+            d = std::max(0.0, c.y - wave::y(c.x));
+            W = d * b * delta_L;
+            S_wash = (HasContact() ? delta_L * b : 0);
+            V_scalar = std::sqrt(SQ(V.x) + (SQ(V.y) + w.z * x));
+            F_contact = x * globals::rho_w * SQ(V_scalar) / 2 * S_wash;
+            M_contact = F_contact * x;
+            S_gap = 2 * GapHeight() * delta_L;
+        }
+
+        constexpr bool HasContact() const
+        {
+            return c.y <= wave::y(c.x);
+        }
+
+        constexpr double GapHeight() const
+        {
+            return std::max(0.0, c.y - d - wave::y(c.x));
+        }
+    };
+
+    struct Compressor {
+        static double constexpr A = -2.756;
+        static double constexpr B = 48.46;
+        static double constexpr C = 2771;
+
+        static double constexpr Q_max = -B / 2 / A; // вершина квадратичной функции
+        static double constexpr p_min = 0.0; // минимальное избыточное давление ВП
+        static double constexpr p_max = A * Q_max * Q_max + B * Q_max + C; // максимальное избыточное давление ВП
+
+        static constexpr double Clamp(double p)
+        {
+            return std::clamp(p, p_min, p_max);
+        }
+
+        static constexpr double Q_in(double p)
+        {
+            // A * Qin * Qin + B * Qin + (C - p) = 0 
+            //      D = B * B - 4 * A * (C - p)
+            return (-B - std::sqrt(B * B - 4 * A * (C - p))) / 2 / A;
+        }
+
+        static constexpr double Q_out(double p, double S_gap)
+        {
+            return globals::chi * std::sqrt(2 * p / globals::rho_a) * S_gap;
+        }
+    };
+
+    std::array<Segment, N> segments; // все N сечений судна
+
+    Vector c; // координата судна
+    double W; // объем ВП
+
+    double p; // избыточное давление ВП
+
+    Vector V; // вектор скорости
+    Vector w; // вектор угловой скорости
+
+    ACV()
+    {
+        W = S * d_max / 2; // половина ВП наполнена
+        c = {0, d_max / 2, 0}; // центр тяжести на половине клиренса ВП
+
+        p = 0; // без давления в подушке только атмосфера, избыточного давления нет
+        
+        V = {V_x, 0, 0}; // присутствует только скорость буксира
+        w = {0, 0, 0}; // угловой скорости нет вообще
+
+        for (int i = 0; i < N; ++i) {
+            segments[i] = Segment(i + 1, W / N);
+        }
     }
 
-private:
-    std::ostream& mOut;
+    void Update(double dt)
+    {
+        UpdateSegmentsParams(c, V, w);
+        auto [_W, F_wave, M_contact, S_gap] = CalcSegmentsCharacteristics();
+
+        double dWdt = W - _W;
+        W = _W;
+
+        double Q_in = Compressor::Q_in(p);
+        double Q_out = Compressor::Q_out(p, S_gap);
+
+        double dV_ydt = (p * S - m * globals::g + F_wave) / m;
+        double dpdt = globals::n * globals::p_a * (Q_in - Q_out - dWdt) / W;
+        double dw_zdt = (p * S * l_AC + M_contact) / I_z;
+
+        V.y += dV_ydt * dt;
+        p = Compressor::Clamp(p + dpdt * dt);
+
+        w.z += dw_zdt * dt;
+
+        // TODO: create operator
+        c.x += V.x * dt;
+        c.y += V.y * dt;
+        c.z += V.z * dt;
+
+        std::cout << p << ' ' << W << ' ' << S_gap << '\n';
+    }
+
+    void UpdateSegmentsParams(Vector const& new_c, Vector const& new_V, Vector const& new_w)
+    {
+        for (auto &seg: segments) {
+            seg.UpdateParams(new_c, new_V, new_w);
+        }
+    }
+
+    std::tuple<double, double, double, double> CalcSegmentsCharacteristics() const
+    {
+        double _W = 0;
+        double _F_wave = 0;
+        double _M_contact = 0;
+        double _S_gap = 0;
+        for (size_t i = 0; i < N; ++i) {
+            _W += segments[i].W;
+            _F_wave += segments[i].F_contact;
+            _M_contact += segments[i].M_contact;
+            _S_gap += segments[i].S_gap;
+        }
+        return {_W, _F_wave, _M_contact, _S_gap};
+    }
 };
-
-struct csv_creator {} csv;
-
-csv_proxy operator <<(std::ostream& out, csv_creator)
-{
-    return csv_proxy(out);
-}
-} // namespace csv
 
 int main(int argc, char** argv)
 {
-    std::ofstream fout("./states.csv", std::ofstream::out);
-    std::vector<std::string> const stateHeader = {"V", "H", "W", "p", "Vphi", "phi", "Qin", "Qout"};
-    fout << csv::csv << stateHeader;
-
-    RK4::State state;
-    state.H = ACV::d / 2 + 0.3;
-    state.W = ACV::S * ACV::d / 2;
-    state.p = 1000.0;
-
-    double const Tmax = 50;
-
     double const dt = 0.05;
-    RK4::Derivative deriv;
-    for (double t = 0.0; t < Tmax; t += dt) {
-        deriv.dV = (state.p * ACV::S - ACV::m * globals::g) / ACV::m;
-        deriv.dH = state.V;
-        deriv.dVphi = state.p * ACV::S * ACV::l / ACV::Iz;
-        deriv.dphi = state.Vphi;
-        deriv.dW = ACV::S * deriv.dH + ACV::S * ACV::l * deriv.dphi;
-        deriv.dp = globals::n * globals::pa * (Compressor::Qin(state.p) - Compressor::Qout(state.p) - deriv.dW) / state.W;
-        std::cout << deriv << '\n';
-
-        state.V += deriv.dV * dt;
-        state.H += deriv.dH * dt;
-        state.W += deriv.dW * dt;
-        state.p += deriv.dp * dt;
-        state.Vphi += deriv.dVphi * dt;
-        state.phi += deriv.dphi * dt;
-        
-        state.p = Compressor::Clamp(state.p);
-        // state.H = std::clamp(state.H, ACV::d / 2 + 0.3, 1000.0);
-        // state.W = std::clamp(state.W, 0.0, ACV::S * ACV::d);
-
-        fout << csv::csv << state;
+    ACV acv;
+    for (double t = 0.0; t < 5.0; t += dt) {
+        acv.Update(dt);
     }
-
-    fout.close();
-
     return EXIT_SUCCESS;
 }
