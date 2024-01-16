@@ -94,7 +94,7 @@ struct ACV {
 
         constexpr void UpdateState()
         {
-            d = std::max(0.0, c.y - wave::y(c.x));
+            d = std::clamp(c.y - wave::y(c.x), 0.0, 1000.0);
             W = d * b * delta_L;
             S_wash = (HasContact() ? delta_L * b : 0);
             V_scalar = std::sqrt(SQ(V.x) + (SQ(V.y) + w.z * x));
@@ -110,7 +110,7 @@ struct ACV {
 
         constexpr double GapHeight() const
         {
-            return std::max(0.0, c.y - d - wave::y(c.x));
+            return std::max(0.0, c.y - d_max - wave::y(c.x));
         }
     };
 
@@ -191,7 +191,7 @@ struct ACV {
         c.y += V.y * dt;
         c.z += V.z * dt;
 
-        std::cout << p << ' ' << W << ' ' << S_gap << '\n';
+        std::cout << std::setw(10) << c.y << ' ' << std::setw(10) << W << ' ' << std::setw(10) << S_gap << '\n';
     }
 
     void UpdateSegmentsParams(Vector const& new_c, Vector const& new_V, Vector const& new_w)
