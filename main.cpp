@@ -28,6 +28,32 @@ Vector operator +(Vector lhs, Vector const& rhs)
     return lhs += rhs;
 }
 
+static size_t constexpr LOG_ALIGN_WIDTH = 14;
+
+template <typename... Args>
+void LOG(Args&&... args)
+{
+#ifndef LOG_CSV
+    ((std::cout << std::setw(LOG_ALIGN_WIDTH) << args), ...);
+#else
+    ((std::cout << '\t' << args), ...);
+#endif
+}
+
+template <typename... Args>
+void LOG_CR(Args&&... args)
+{
+    LOG(args...);
+    std::cout << '\r';
+}
+
+template <typename... Args>
+void LOG_LF(Args&&... args)
+{
+    LOG(args...);
+    std::cout << '\n';
+}
+
 namespace globals {
 inline double constexpr g = 9.8; // ускорение свободного падения 
 inline double constexpr n = 1.4; // показатель политропы
@@ -112,6 +138,11 @@ struct ACV {
         {
             return std::max(0.0, c.y - d_max - wave::y(c.x));
         }
+
+        void Serialize() const
+        {
+            LOG(W, c.y, d, GapHeight());
+        }
     };
 
     struct Compressor {
@@ -119,6 +150,7 @@ struct ACV {
         static double constexpr B = 48.46;
         static double constexpr C = 2771;
 
+        static double constexpr Q_min = 0.0;
         static double constexpr Q_max = -B / 2 / A; // вершина квадратичной функции
         static double constexpr p_min = 0.0; // минимальное избыточное давление ВП
         static double constexpr p_max = A * Q_max * Q_max + B * Q_max + C; // максимальное избыточное давление ВП
@@ -171,14 +203,14 @@ struct ACV {
         UpdateSegmentsParams(c, V, w);
         auto [_W, F_wave, M_contact, S_gap] = CalcSegmentsCharacteristics();
 
-        double dWdt = W - _W;
+        double dWdt = _W - W;
         W = _W;
 
         double Q_in = Compressor::Q_in(p);
         double Q_out = Compressor::Q_out(p, S_gap);
 
         double dV_ydt = (p * S - m * globals::g + F_wave) / m;
-        double dpdt = globals::n * globals::p_a * (Q_in - Q_out - dWdt) / W;
+        double dpdt = globals::n * globals::p_a * (Q_in - Q_out + dWdt) / W;
         double dw_zdt = (p * S * l_AC + M_contact) / I_z;
 
         V.y += dV_ydt * dt;
@@ -191,7 +223,7 @@ struct ACV {
         c.y += V.y * dt;
         c.z += V.z * dt;
 
-        std::cout << std::setw(10) << c.y << ' ' << std::setw(10) << W << ' ' << std::setw(10) << S_gap << '\n';
+        LOG_CR(c.y, W, S_gap, V.y, w.z, p, Q_in, Q_out, dWdt, dpdt);
     }
 
     void UpdateSegmentsParams(Vector const& new_c, Vector const& new_V, Vector const& new_w)
@@ -219,10 +251,12 @@ struct ACV {
 
 int main(int argc, char** argv)
 {
-    double const dt = 0.05;
+    double const dt = 1e-6;
     ACV acv;
-    for (double t = 0.0; t < 5.0; t += dt) {
+    LOG_LF("H", "W", "S_gap", "V_y", "w_z", "p", "Q_in", "Q_out", "dW/dt", "dp/dt");
+    for (double t = 0.0; t < 5; t += dt) {
         acv.Update(dt);
     }
+    LOG_LF();
     return EXIT_SUCCESS;
 }
