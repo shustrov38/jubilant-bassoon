@@ -11,3 +11,6 @@ paper/*
 
 # cpp build dir
 build
+
+# big csv's
+resources/*.csv

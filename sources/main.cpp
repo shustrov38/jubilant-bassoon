@@ -28,31 +28,56 @@ Vector operator +(Vector lhs, Vector const& rhs)
     return lhs += rhs;
 }
 
-static size_t constexpr LOG_ALIGN_WIDTH = 14;
+namespace logger {
+static size_t constexpr ALIGN_WIDTH = 14;
 
-template <typename... Args>
-void LOG(Args&&... args)
-{
+static char   constexpr CHAR_LF = '\n';
+
 #ifndef LOG_CSV
-    ((std::cout << std::setw(LOG_ALIGN_WIDTH) << args), ...);
+static char   constexpr CHAR_CR = '\r';
 #else
-    ((std::cout << '\t' << args), ...);
+static char   constexpr CHAR_CR = '\n';
 #endif
+
+#ifndef LOG_CSV
+template <typename... Args>
+void Log(Args&&... args)
+{
+    ((std::cout << std::setw(ALIGN_WIDTH) << args), ...);
+}
+#else
+void Log()
+{
+}
+
+template <typename Head, typename... Tail>
+void Log(Head&& head, Tail&&... tail)
+{
+    std::cout << head << '\t';
+    Log(tail...);
+}
+
+template <typename Head>
+void Log(Head&& head)
+{
+    std::cout << head;
+}
+#endif
+
+template <typename... Args>
+void Log_CR(Args&&... args)
+{
+    Log(args...);
+    std::cout << CHAR_CR;
 }
 
 template <typename... Args>
-void LOG_CR(Args&&... args)
+void Log_LF(Args&&... args)
 {
-    LOG(args...);
-    std::cout << '\r';
+    Log(args...);
+    std::cout << CHAR_LF;
 }
-
-template <typename... Args>
-void LOG_LF(Args&&... args)
-{
-    LOG(args...);
-    std::cout << '\n';
-}
+} // namespace logger
 
 namespace globals {
 inline double constexpr g = 9.8; // ускорение свободного падения 
@@ -67,7 +92,7 @@ namespace wave {
 constexpr double y(double x) {
     return 0.0;
 }
-};
+}
 
 struct ACV {
     static double constexpr m = 16000; // масса
@@ -77,6 +102,8 @@ struct ACV {
     static double constexpr d_max = 0.7; // максимальная высота воздушной подушки
     static double constexpr S = L * b; // площадь воздушной подушки
     static double constexpr I_z = 250000; // момент инерции судна
+
+    static double constexpr theta = 1; // параметр влияния волны на судно
 
     static double constexpr V_x = 2; // постоянная скорость буксира
 
@@ -124,7 +151,7 @@ struct ACV {
             W = d * b * delta_L;
             S_wash = (HasContact() ? delta_L * b : 0);
             V_scalar = std::sqrt(SQ(V.x) + (SQ(V.y) + w.z * x));
-            F_contact = x * globals::rho_w * SQ(V_scalar) / 2 * S_wash;
+            F_contact = theta * globals::rho_w * SQ(V_scalar) / 2 * S_wash;
             M_contact = F_contact * x;
             S_gap = 2 * GapHeight() * delta_L;
         }
@@ -141,7 +168,7 @@ struct ACV {
 
         void Serialize() const
         {
-            LOG(W, c.y, d, GapHeight());
+            logger::Log_LF(W, c.y, d, GapHeight());
         }
     };
 
@@ -179,6 +206,8 @@ struct ACV {
     double W; // объем ВП
 
     double p; // избыточное давление ВП
+    
+    double phi; // тангаж
 
     Vector V; // вектор скорости
     Vector w; // вектор угловой скорости
@@ -188,8 +217,10 @@ struct ACV {
         W = S * d_max / 2; // половина ВП наполнена
         c = {0, d_max / 2, 0}; // центр тяжести на половине клиренса ВП
 
-        p = 0; // без давления в подушке только атмосфера, избыточного давления нет
-        
+        p = 0; // в подушке только атмосфера, избыточного давления нет
+
+        phi = 0; // судно стоит горизонтально
+
         V = {V_x, 0, 0}; // присутствует только скорость буксира
         w = {0, 0, 0}; // угловой скорости нет вообще
 
@@ -223,7 +254,9 @@ struct ACV {
         c.y += V.y * dt;
         c.z += V.z * dt;
 
-        LOG_CR(c.y, W, S_gap, V.y, w.z, p, Q_in, Q_out, dWdt, dpdt);
+        phi += w.z * dt;
+
+        logger::Log_CR(c.y, W, S_gap, V.y, phi, p, Q_in, Q_out, dWdt, dpdt);
     }
 
     void UpdateSegmentsParams(Vector const& new_c, Vector const& new_V, Vector const& new_w)
@@ -253,10 +286,10 @@ int main(int argc, char** argv)
 {
     double const dt = 1e-6;
     ACV acv;
-    LOG_LF("H", "W", "S_gap", "V_y", "w_z", "p", "Q_in", "Q_out", "dW/dt", "dp/dt");
+    logger::Log_LF("H", "W", "S_gap", "V_y", "phi", "p", "Q_in", "Q_out", "dW/dt", "dp/dt");
     for (double t = 0.0; t < 5; t += dt) {
         acv.Update(dt);
     }
-    LOG_LF();
+    logger::Log_LF();
     return EXIT_SUCCESS;
 }
