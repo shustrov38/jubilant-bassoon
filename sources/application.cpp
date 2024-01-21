@@ -16,7 +16,8 @@ Application::Application(sf::ContextSettings const& settings)
     std::cout << "SETTINGS " << settings.majorVersion << "." << settings.minorVersion << std::endl;
 
     mWindow.setFramerateLimit(FramesPerSecond);
-    
+    mView.reset(sf::FloatRect(0, 0, WindowWidth, WindowHeight));
+
     ImGui::SFML::Init(mWindow, false);
     ImGui::GetIO().Fonts->AddFontFromFileTTF("GeistMono-Regular.otf", 14.f, nullptr, mCyrillicRanges);
     ImGui::SFML::UpdateFontTexture();
@@ -75,11 +76,12 @@ void Application::HandleInput(sf::Keyboard::Key key, bool isPressed)
 
 void Application::Update(sf::Time deltaTime)
 {
-    mACV.Update(deltaTime);
+    mACV.Update(deltaTime, mView);
 }
 
 void Application::Render()
-{
+{   
+    mWindow.setView(mView);
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
     mACV.Render(mWindow);
     ImGui::PopFont();

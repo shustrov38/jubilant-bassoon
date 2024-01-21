@@ -14,7 +14,7 @@ public:
     explicit ACV(sf::Vector2f const& windowSize);
     ~ACV();
 
-    void Update(sf::Time deltaTime);
+    void Update(sf::Time deltaTime, sf::View &view);
     void Render(sf::RenderWindow& window);
 
 private:
@@ -35,9 +35,14 @@ private:
 
     sf::Color GetColorForPressure() const;
 
+    static constexpr double ToDegrees(double radians);
+    static constexpr double ToRadians(double degrees);
+
     static float HistoryGetter(void *data, int idx);
 
 private:
+    static double constexpr sCenterOfGravityBoxSize = 0.5;
+
     static double constexpr sVehicleLength = 14;
     static double constexpr sVehicleHeight = 1.4;
     static float  constexpr sScaleFactor = 50;
@@ -53,9 +58,11 @@ private:
     sf::Vector2f mOffset;
 
     sf::RectangleShape mVehicle;
+    sf::RectangleShape mCenterOfGravity;
     std::array<sf::RectangleShape, N> mAirCushionSegments;
 
     size_t mUpdateStepsToPushHistory = 0;
     CyclicBuffer<double, sHistorySize> mHistory_Q_in;
     CyclicBuffer<double, sHistorySize> mHistory_Q_out;
+    CyclicBuffer<double, sHistorySize> mHistory_phi;
 };

@@ -36,5 +36,7 @@ public:
 
 private:
     sf::RenderWindow mWindow;
+    sf::View mView;
+
     ACV mACV;
 };
