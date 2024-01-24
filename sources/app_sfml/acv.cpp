@@ -24,10 +24,11 @@ ACV::ACV(sf::Vector2f const& windowSize)
     mCenterOfGravity.setOutlineColor(sf::Color::White);
     mCenterOfGravity.setOutlineThickness(1);
 
-    phisics::ACV::Update(0.0);
+    double const dt = 1e-5;
+    phisics::ACV::Update(dt);
     sf::Color pressureColor = GetColorForPressure();
     for (size_t i = 0; i < mAirCushionSegments.size(); ++i) {
-        mAirCushionSegments[i].setSize(sScaleFactor * sf::Vector2f(delta_L, segments[i].d));
+        mAirCushionSegments[i].setSize(sScaleFactor * sf::Vector2f(delta_L, std::min(d_max, segments[i].d)));
         mAirCushionSegments[i].setOrigin(sScaleFactor * sf::Vector2f(delta_L / 2, 0));
         mAirCushionSegments[i].setPosition(ToWindowCoord(sf::Vector2f(segments[i].c.x, segments[i].c.y)));
 
@@ -41,7 +42,7 @@ ACV::~ACV()
 
 void ACV::Update(sf::Time deltaTime, sf::View &view)
 {
-    double const dt = 1e-4;
+    double const dt = 1e-5;
     phisics::ACV::Update(dt);
 
     double const phiDeg = ToDegrees(phi);
@@ -58,7 +59,7 @@ void ACV::Update(sf::Time deltaTime, sf::View &view)
 
     sf::Color pressureColor = GetColorForPressure();
     for (size_t i = 0; i < mAirCushionSegments.size(); ++i) {
-        mAirCushionSegments[i].setSize(sScaleFactor * sf::Vector2f(delta_L, segments[i].d));
+        mAirCushionSegments[i].setSize(sScaleFactor * sf::Vector2f(delta_L, std::min(d_max, segments[i].d)));
         mAirCushionSegments[i].setPosition(ToWindowCoord(sf::Vector2f(segments[i].c.x, segments[i].c.y)));
         mAirCushionSegments[i].setRotation(phiDeg);
 

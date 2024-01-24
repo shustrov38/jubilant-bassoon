@@ -1,12 +1,5 @@
-#include "application.h"
+#include "acv_phisics.h"
 
-int main()
+int main(void)
 {
-    sf::ContextSettings settings;
-    settings.antialiasingLevel = 8;
-
-    Application app(settings);
-    app.Run();
-
-    return EXIT_SUCCESS;
 }

@@ -60,7 +60,8 @@ inline double constexpr rho_w = 1000.0; // плотность воды
 
 namespace wave {
 inline constexpr double y(double x) {
-    return std::sin(x) / 3;
+    // return std::sin(x) / 3;
+    return 0.0;
 }
 }
 
@@ -73,7 +74,7 @@ struct ACV {
     static double constexpr S = L * b; // площадь воздушной подушки
     static double constexpr I_z = 250000; // момент инерции судна
 
-    static double constexpr theta = 50; // параметр влияния волны на судно
+    static double constexpr theta = 0.1; // параметр влияния волны на судно
 
     static double constexpr V_x = 5; // постоянная скорость буксира
 
@@ -81,6 +82,8 @@ struct ACV {
     static double constexpr delta_L = L / N; // ширина сечения ВП
 
     struct Segment {
+        bool isFirstOrLast;
+
         double x; // знаковое смещение сегмента относительно центра тяжести судна
 
         Vector c; // координата верхней части сегмента ВП
@@ -106,6 +109,8 @@ struct ACV {
 
         constexpr bool HasContact() const;
         constexpr double GapHeight() const;
+
+        constexpr bool IsFirstOrLast() const;
     };
 
     struct Compressor {
@@ -142,6 +147,8 @@ struct ACV {
     double W; // объем ВП
 
     double p; // избыточное давление ВП
+    double p_qs;
+    double p_damp;
     
     double phi; // тангаж
 

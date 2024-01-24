@@ -11,7 +11,8 @@ namespace phisics {
 
 ACV::Segment::Segment(int index, double W)
     : W(W)
-    , x(L / 2 - delta_L * (index - 0.5)) 
+    , x(L / 2 - delta_L * (index - 0.5))
+    , isFirstOrLast(index == 1 || index == N) 
 {
 }
 
@@ -27,31 +28,37 @@ constexpr void ACV::Segment::UpdateParams(Vector const& new_c, Vector const& new
 
 constexpr void ACV::Segment::UpdateState()
 {
-    d = std::clamp(c.y - wave::y(c.x), 0.0, d_max);
+    d = std::max(0.0, c.y - wave::y(c.x));
     W = d * b * delta_L;
     S_wash = (HasContact() ? delta_L * b : 0);
     V_scalar = std::sqrt(SQ(V.x) + SQ(V.y + w.z * (x + l_AC)));
     F_contact = theta * globals::rho_w * SQ(V_scalar) / 2 * S_wash;
     M_contact = F_contact * (x + l_AC);
-    S_gap = 2 * GapHeight() * delta_L;
+    S_gap = GapHeight() * (2 * delta_L + IsFirstOrLast() * b);
 }
 
 constexpr bool ACV::Segment::HasContact() const
 {
     return c.y <= wave::y(c.x);
 }
-
 constexpr double ACV::Segment::GapHeight() const
 {
     return std::max(0.0, c.y - d_max - wave::y(c.x));
 }
+constexpr bool ACV::Segment::IsFirstOrLast() const
+{
+    return isFirstOrLast;
+}
 
 ACV::ACV()
 {
-    W = S * d_max / 2; // половина ВП наполнена
-    c = {0, d_max / 2, 0}; // центр тяжести на половине клиренса ВП
+    double const d_gap = 0.01; // высота зазора
+    W = S * (d_max +  d_gap);
+    c = {0, d_max +  d_gap, 0};
 
-    p = 0; // в подушке только атмосфера, избыточного давления нет
+    p_qs = m * globals::g / S;
+    p_damp = 0;
+    p = p_qs + p_damp;
 
     phi = 0; // судно стоит горизонтально
 
@@ -62,7 +69,16 @@ ACV::ACV()
         segments[i] = Segment(i + 1, W / N);
     }
 
-    gWriter.WriteRow("H", "W", "phi", "p", "Q_in", "Q_out", "dW/dt", "dp/dt");
+    gWriter.WriteRow("H", "W", "phi", "p", "Q_in", "Q_out", "dH/dt", "p_qs", "p_damp", "S_gap", "S");
+}
+
+constexpr double D(double S_gap, double S)
+{
+    double constexpr A = 31253.553;
+    double constexpr B = 6930673.352;
+    double constexpr C = -1025.178;
+    double const x = std::max(0.001, S_gap / S);
+    return A + B * std::exp(C * x);
 }
 
 void ACV::Update(double dt)
@@ -75,19 +91,26 @@ void ACV::Update(double dt)
     Q_in = Compressor::Q_in(p);
     Q_out = Compressor::Q_out(p, S_gap);
 
-    double dV_ydt = (p * S - m * globals::g + F_wave) / m;
-    double dpdt = globals::n * globals::p_a * (Q_in - Q_out + dWdt) / W;
-    double dw_zdt = (p * S * l_AC + M_contact) / I_z;
+    double const F_AC = p * S;
+    double const F_damp = p_damp * S;
+    double const F_attr = m * globals::g;
+    double dV_y__dt = (F_AC - F_attr + F_damp + F_wave) / m;
 
-    V.y += dV_ydt * dt;
-    p = Compressor::Clamp(p + dpdt * dt);
+    double dp_qs__dt = globals::n * globals::p_a * (Q_in - Q_out - dWdt) / W;
+    p_qs = Compressor::Clamp(p_qs + dp_qs__dt * dt);
+    p_damp = D(S_gap, S) * globals::rho_a * (-Q_in / S * V.y + 0.5 * SQ(V.y)) * S;
 
-    w.z += dw_zdt * dt;
+    double dw_z__dt = (p * S * l_AC - M_contact) / I_z;
+
+    V.y += dV_y__dt * dt;
+    w.z += dw_z__dt * dt;
+
+    p = p_qs; // p_damp is not included
 
     c += V * dt;
     phi += w.z * dt;
 
-    gWriter.WriteRow(c.y, W, phi, p, Q_in, Q_out, dWdt, dpdt);
+    gWriter.WriteRow(c.y, W, phi, p, Q_in, Q_out, dV_y__dt, p_qs, p_damp * dt, S_gap, S);
 }
 
 std::tuple<double, double, double, double> ACV::CalcSegmentsCharacteristics(
