@@ -105,7 +105,7 @@ void ACV::RenderWave(sf::RenderWindow& window)
 
     sf::VertexArray wave(sf::LineStrip, waveStep);
     for (double x = le; x < ri; x += waveStep) {
-        auto mathCoord = sf::Vector2f(x, phisics::wave::y(x));
+        auto mathCoord = sf::Vector2f(x, phisics::Wave::Y(x, t));
         wave.append(sf::Vertex(ToWindowCoord(mathCoord), sf::Color::Blue));
     }
 

@@ -16,19 +16,26 @@ ACV::Segment::Segment(int index, double W)
 {
 }
 
-constexpr void ACV::Segment::UpdateParams(Vector const& new_c, Vector const& new_V, Vector const& new_w, double phi)
+constexpr void ACV::Segment::UpdateParams(
+    Vector const& new_c,
+    Vector const& new_V,
+    Vector const& new_w,
+    double phi,
+    double new_t
+)
 {
     c = new_c;
     c.x += x; // применить смещение
     c = detail::RotatePointXY(new_c, c, phi);
     V = new_V;
     w = new_w;
+    t = new_t;
     UpdateState();
 }
 
 constexpr void ACV::Segment::UpdateState()
 {
-    d = std::max(0.0, c.y - wave::y(c.x));
+    d = std::max(0.0, c.y - Wave::Y(c.x, t));
     W = d * b * delta_L;
     S_wash = (HasContact() ? delta_L * b : 0);
     V_scalar = std::sqrt(SQ(V.x) + SQ(V.y + w.z * (x + l_AC)));
@@ -39,11 +46,11 @@ constexpr void ACV::Segment::UpdateState()
 
 constexpr bool ACV::Segment::HasContact() const
 {
-    return c.y <= wave::y(c.x);
+    return c.y <= Wave::Y(c.x, t);
 }
 constexpr double ACV::Segment::GapHeight() const
 {
-    return std::max(0.0, c.y - d_max - wave::y(c.x));
+    return std::max(0.0, c.y - d_max - Wave::Y(c.x, t));
 }
 constexpr bool ACV::Segment::IsFirstOrLast() const
 {
@@ -65,25 +72,28 @@ ACV::ACV()
     V = {V_x, 0, 0}; // присутствует только скорость буксира
     w = {0, 0, 0}; // угловой скорости нет вообще
 
+    t = 0;
+    itersBeforeDump = ItersWithoutDump;
+
     for (int i = 0; i < N; ++i) {
         segments[i] = Segment(i + 1, W / N);
     }
 
-    gWriter.WriteRow("H", "W", "phi", "p", "Q_in", "Q_out", "dH/dt", "p_qs", "p_damp", "S_gap", "S");
+    gWriter.WriteRow("H", "W", "phi", "p", "Q_in", "Q_out");
 }
 
-constexpr double D(double S_gap, double S)
+double D(double S_gap, double S)
 {
-    double constexpr A = 31253.553;
-    double constexpr B = 6930673.352;
-    double constexpr C = -1025.178;
+    double const A = 31253.553;
+    double const B = 6930673.352;
+    double const C = -1025.178;
     double const x = std::max(0.001, S_gap / S);
     return A + B * std::exp(C * x);
 }
 
 void ACV::Update(double dt)
 {
-    auto [_W, F_wave, M_contact, S_gap] = CalcSegmentsCharacteristics(c, V, w, phi);
+    auto [_W, F_wave, M_contact, S_gap] = CalcSegmentsCharacteristics(c, V, w, phi, t);
 
     double dWdt = _W - W;
     W = _W;
@@ -110,14 +120,19 @@ void ACV::Update(double dt)
     c += V * dt;
     phi += w.z * dt;
 
-    gWriter.WriteRow(c.y, W, phi, p, Q_in, Q_out, dV_y__dt, p_qs, p_damp * dt, S_gap, S);
+    if (itersBeforeDump == 0) {
+        itersBeforeDump = ItersWithoutDump;
+        gWriter.WriteRow(c.y, W, phi, p, Q_in, Q_out);
+    }
+    --itersBeforeDump;
 }
 
 std::tuple<double, double, double, double> ACV::CalcSegmentsCharacteristics(
     Vector const& new_c, 
     Vector const& new_V, 
     Vector const& new_w,
-    double phi
+    double phi,
+    double new_t
 )
 {
     double _W = 0;
@@ -125,7 +140,7 @@ std::tuple<double, double, double, double> ACV::CalcSegmentsCharacteristics(
     double _M_contact = 0;
     double _S_gap = 0;
     for (size_t i = 0; i < N; ++i) {
-        segments[i].UpdateParams(new_c, new_V, new_w, phi);
+        segments[i].UpdateParams(new_c, new_V, new_w, phi, new_t);
         _W += segments[i].W;
         _F_wave += segments[i].F_contact;
         _M_contact += segments[i].M_contact;

@@ -3,6 +3,7 @@
 #include <cmath>
 #include <tuple>
 #include <array>
+#include <limits>
 #include <cassert>
 #include <algorithm>
 
@@ -39,15 +40,29 @@ struct Vector {
 
 namespace detail {
 template <typename Vec>
-constexpr Vec RotatePointXY(Vec const& p0, Vec const& p, double phi)
+Vec constexpr RotatePointXY(Vec const& p0, Vec const& p, double phi)
 {
     Vec pp = p;
     pp.x = p0.x + (p.x - p0.x) * std::cos(phi) + (p.y - p0.y) * std::sin(phi);
     pp.y = p0.y - (p.x - p0.x) * std::sin(phi) + (p.y - p0.y) * std::cos(phi);
     return pp;
 }
+
+double constexpr SqrtNewtonRaphson(double x, double curr, double prev)
+{
+    return std::abs(curr - prev) < 1e-6 
+        ? curr 
+        : SqrtNewtonRaphson(x, 0.5 * (curr + x / curr), curr);
+}
 } // namespace detail
 
+
+double constexpr Sqrt(double x)
+{
+	return x >= 0 && x < std::numeric_limits<double>::infinity()
+		? detail::SqrtNewtonRaphson(x, x, 0)
+		: std::numeric_limits<double>::quiet_NaN();
+}
 
 namespace globals {
 inline double constexpr g = 9.8; // ускорение свободного падения 
@@ -58,12 +73,21 @@ inline double constexpr rho_a = 1.2690; // плотность воздуха
 inline double constexpr rho_w = 1000.0; // плотность воды
 } // namespace globals
 
-namespace wave {
-inline constexpr double y(double x) {
-    // return std::sin(x) / 3;
-    return 0.0;
-}
-}
+class Wave {
+public:
+    static double constexpr Y(double x, double t)
+    {
+        return A * std::sin(k * x - omega * t);
+    }
+
+private:
+    static double constexpr A = 0.5; // амплитуда волны
+    static double constexpr h = 2 * A; // высота волны
+    static double constexpr lambda = 20 * h; // длина волны
+    static double constexpr k = Sqrt(2 * M_PI / lambda); // волновой вектор
+    static double constexpr c = Sqrt(h / k); // скорость волны
+    static double constexpr omega = c * k; // циклическая частота
+};
 
 struct ACV {
     static double constexpr m = 16000; // масса
@@ -76,10 +100,12 @@ struct ACV {
 
     static double constexpr theta = 0.1; // параметр влияния волны на судно
 
-    static double constexpr V_x = 5; // постоянная скорость буксира
+    static double constexpr V_x = 20; // постоянная скорость буксира
 
     static int    constexpr N = 300; // количество сечений ВП
     static double constexpr delta_L = L / N; // ширина сечения ВП
+
+    static size_t constexpr ItersWithoutDump = 100;
 
     struct Segment {
         bool isFirstOrLast;
@@ -101,10 +127,18 @@ struct ACV {
 
         double S_gap; // ширина зазора в сегменте
 
+        double t; // текущее время
+
         Segment() = default;
         explicit Segment(int index, double W);
 
-        constexpr void UpdateParams(Vector const& new_c, Vector const& new_V, Vector const& new_w, double phi);
+        constexpr void UpdateParams(
+            Vector const& new_c, 
+            Vector const& new_V, 
+            Vector const& new_w, 
+            double phi, 
+            double new_t
+        );
         constexpr void UpdateState();
 
         constexpr bool HasContact() const;
@@ -158,6 +192,9 @@ struct ACV {
     double Q_in; // расход возуха в ВП
     double Q_out; // расход возуха из ВП
 
+    double t; // текущее время
+    size_t itersBeforeDump;
+
     ACV();
 
     void Update(double dt);
@@ -166,7 +203,8 @@ struct ACV {
         Vector const& new_c, 
         Vector const& new_V, 
         Vector const& new_w,
-        double phi
+        double phi,
+        double new_t
     );
 };
 } // namespace phisics
