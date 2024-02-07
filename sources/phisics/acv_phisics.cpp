@@ -4,7 +4,7 @@ namespace options {
 DEFINE_OPTION(CSV_LOG)
 } // namespace options
 
-static csv::Writer gWriter(options::GET_OPTION(CSV_LOG).GetValue());
+static csv::Writer<1000ul> gWriter(options::GET_OPTION(CSV_LOG).GetValue());
 
 namespace phisics {
 #define SQ(x) (x) * (x)
@@ -65,7 +65,7 @@ ACV::ACV()
 
     p_qs = m * globals::g / S;
     p_damp = 0;
-    p = p_qs + p_damp;
+    p = p_qs;
 
     phi = 0; // судно стоит горизонтально
 
@@ -73,7 +73,6 @@ ACV::ACV()
     w = {0, 0, 0}; // угловой скорости нет вообще
 
     t = 0;
-    itersBeforeDump = ItersWithoutDump;
 
     for (int i = 0; i < N; ++i) {
         segments[i] = Segment(i + 1, W / N);
@@ -120,11 +119,9 @@ void ACV::Update(double dt)
     c += V * dt;
     phi += w.z * dt;
 
-    if (itersBeforeDump == 0) {
-        itersBeforeDump = ItersWithoutDump;
-        gWriter.WriteRow(c.y, W, phi, p, Q_in, Q_out);
-    }
-    --itersBeforeDump;
+    t += dt;
+
+    gWriter.WriteRow(c.y, W, phi, p, Q_in, Q_out);
 }
 
 std::tuple<double, double, double, double> ACV::CalcSegmentsCharacteristics(

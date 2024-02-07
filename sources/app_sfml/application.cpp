@@ -75,14 +75,18 @@ void Application::HandleInput(sf::Keyboard::Key key, bool isPressed)
 }
 
 void Application::Update(sf::Time deltaTime)
-{
-    mACV.Update(deltaTime, mView);
+{   
+    for (int i = 0; i < 1000; ++i) {
+        mACV.Update(deltaTime, mView);
+    }
 }
 
 void Application::Render()
 {   
     mWindow.setView(mView);
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+
     mACV.Render(mWindow);
+    
     ImGui::PopFont();
 }

@@ -75,18 +75,18 @@ inline double constexpr rho_w = 1000.0; // плотность воды
 
 class Wave {
 public:
-    static double constexpr Y(double x, double t)
-    {
-        return A * std::sin(k * x - omega * t);
-    }
-
-private:
-    static double constexpr A = 0.5; // амплитуда волны
+    static double constexpr A = 0.4; // амплитуда волны
     static double constexpr h = 2 * A; // высота волны
     static double constexpr lambda = 20 * h; // длина волны
     static double constexpr k = Sqrt(2 * M_PI / lambda); // волновой вектор
     static double constexpr c = Sqrt(h / k); // скорость волны
     static double constexpr omega = c * k; // циклическая частота
+
+public:
+    static double constexpr Y(double x, double t)
+    {
+        return A * std::sin(k * x + omega * t);
+    }
 };
 
 struct ACV {
@@ -104,8 +104,6 @@ struct ACV {
 
     static int    constexpr N = 300; // количество сечений ВП
     static double constexpr delta_L = L / N; // ширина сечения ВП
-
-    static size_t constexpr ItersWithoutDump = 100;
 
     struct Segment {
         bool isFirstOrLast;
@@ -193,7 +191,6 @@ struct ACV {
     double Q_out; // расход возуха из ВП
 
     double t; // текущее время
-    size_t itersBeforeDump;
 
     ACV();
 

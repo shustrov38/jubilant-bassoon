@@ -114,12 +114,9 @@ void ACV::RenderWave(sf::RenderWindow& window)
 void ACV::RenderImGui()
 {
     ImGui::Begin(U8("Параметры ВП"));
-    
     ImGui::Text(U8("Избыточное давление %.3lf Па"), p);
     ImGui::Text(U8("Объем %.3lf м^3"), W);
-
     ImGui::NewLine();
-
     ImGui::PlotLines(
         U8("Расход в ВП  [Q_in]"),
         HistoryGetter,
@@ -142,9 +139,7 @@ void ACV::RenderImGui()
         50,
         ImVec2(sHistorySize * 3, 50)
     );
-
     ImGui::NewLine();
-
     ImGui::PlotLines(
         U8("Тангаж [phi]"),
         HistoryGetter,
@@ -156,8 +151,21 @@ void ACV::RenderImGui()
         25,
         ImVec2(sHistorySize * 3, 50)
     );
-
     ImGui::End();
+
+    ImGui::Begin(U8("Параметры волны"));
+    ImGui::Text(U8("Амплитуда           %.3lf м"), phisics::Wave::A);
+    ImGui::Text(U8("Высота              %.3lf м"), phisics::Wave::h);
+    ImGui::Text(U8("Длина               %.3lf м"), phisics::Wave::lambda);
+    ImGui::Text(U8("Скорость            %.3lf м/c"), phisics::Wave::c);
+    ImGui::Text(U8("Волновой вектор     %.3lf"), phisics::Wave::k);
+    ImGui::Text(U8("Циклическая частота %.3lf Гц"), phisics::Wave::omega);
+    ImGui::End();
+
+    ImGui::Begin(U8("Время"));
+    ImGui::Text(U8("Время с начала симуляции %.3lf с"), t);
+    ImGui::End();
+
 }
 
 bool ACV::IsOnScreen(sf::Vector2f const& coord) const
