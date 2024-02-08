@@ -19,7 +19,7 @@ Application::Application(sf::ContextSettings const& settings)
     mView.reset(sf::FloatRect(0, 0, WindowWidth, WindowHeight));
 
     ImGui::SFML::Init(mWindow, false);
-    ImGui::GetIO().Fonts->AddFontFromFileTTF("GeistMono-Regular.otf", 14.f, nullptr, mCyrillicRanges);
+    ImGui::GetIO().Fonts->AddFontFromFileTTF("../res/GeistMono-Regular.otf", 14.f, nullptr, mCyrillicRanges);
     ImGui::SFML::UpdateFontTexture();
 }
 

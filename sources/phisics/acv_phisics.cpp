@@ -61,7 +61,7 @@ ACV::ACV()
 {
     double const d_gap = 0.01; // высота зазора
     W = S * (d_max +  d_gap);
-    c = {0, d_max +  d_gap, 0};
+    c = {0, d_max * 3 / 4 +  d_gap, 0};
 
     p_qs = m * globals::g / S;
     p_damp = 0;

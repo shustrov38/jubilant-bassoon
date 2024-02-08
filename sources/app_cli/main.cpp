@@ -11,7 +11,7 @@ int main()
 
     double const dt = 1e-5;
     double const T_min = 0.0;
-    double const T_max = 300.0;
+    double const T_max = 600.0;
     assert(T_min < T_max);
 
     size_t const total = (T_max - T_min + dt - eps) / dt;

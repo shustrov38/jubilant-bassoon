@@ -102,7 +102,7 @@ struct ACV {
 
     static double constexpr V_x = 20; // постоянная скорость буксира
 
-    static int    constexpr N = 300; // количество сечений ВП
+    static int    constexpr N = 100; // количество сечений ВП
     static double constexpr delta_L = L / N; // ширина сечения ВП
 
     struct Segment {
