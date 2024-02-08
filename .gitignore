@@ -9,8 +9,13 @@ paper/*
 !paper/*.tex
 !paper/*.pdf
 
-# cpp build dir
+# build files
 build
+_build
+install.log
+make.log
+cmake.log
+
 
 # big csv's
 resources/*.csv

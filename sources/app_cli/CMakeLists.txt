@@ -3,5 +3,9 @@ cmake_minimum_required(VERSION 3.0.0)
 file(GLOB PROJECT_SOURCES *.cpp ${COMMON_DIR}*.cpp ${PHISICS_DIR}/*.cpp)
 file(GLOB PROJECT_HEADERS *.h ${COMMON_DIR}*.h ${PHISICS_DIR}/*.h)
 
-add_executable(${MAIN_TARGET_NAME} ${PROJECT_SOURCES} ${PROJECT_HEADERS})
-target_include_directories(${MAIN_TARGET_NAME} PUBLIC ${PHISICS_DIR} ${COMMON_DIR})
+set(TARGET_NAME "${MAIN_TARGET_NAME}")
+
+add_executable(${TARGET_NAME} ${PROJECT_SOURCES} ${PROJECT_HEADERS})
+target_include_directories(${TARGET_NAME} PUBLIC ${PHISICS_DIR} ${COMMON_DIR})
+
+install(TARGETS ${TARGET_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
