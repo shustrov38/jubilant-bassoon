@@ -162,8 +162,10 @@ void ACV::RenderImGui()
     ImGui::Text(U8("Циклическая частота %.3lf Гц"), phisics::Wave::omega);
     ImGui::End();
 
-    ImGui::Begin(U8("Время"));
-    ImGui::Text(U8("Время с начала симуляции %.3lf с"), t);
+    ImGui::Begin(U8("Характеристики"));
+    ImGui::Text(U8("Время с начала симуляции     %.3lf с"), t);
+    ImGui::Text(U8("Вертикальная координата ц.т  %.3lf м"), c.y);
+    ImGui::Text(U8("Вертикальная скорость судна  %.3lf м/с"), V.y);
     ImGui::End();
 
 }

@@ -20,15 +20,17 @@ constexpr void ACV::Segment::UpdateParams(
     Vector const& new_c,
     Vector const& new_V,
     Vector const& new_w,
-    double phi,
+    double new_phi,
     double new_t
 )
 {
+    phi = new_phi;
     c = new_c;
     c.x += x; // применить смещение
     c = detail::RotatePointXY(new_c, c, phi);
     V = new_V;
     w = new_w;
+    t_prev = t;
     t = new_t;
     UpdateState();
 }
@@ -42,6 +44,7 @@ constexpr void ACV::Segment::UpdateState()
     F_contact = theta * globals::rho_w * SQ(V_scalar) / 2 * S_wash;
     M_contact = F_contact * (x + l_AC);
     S_gap = GapHeight() * (2 * delta_L + IsFirstOrLast() * b);
+    V_y = Wave::Y(c.x, t_prev) - Wave::Y(c.x, t);
 }
 
 constexpr bool ACV::Segment::HasContact() const
@@ -50,7 +53,9 @@ constexpr bool ACV::Segment::HasContact() const
 }
 constexpr double ACV::Segment::GapHeight() const
 {
-    return std::max(0.0, c.y - d_max - Wave::Y(c.x, t));
+    Vector lowestPoint(c.x, c.y - d_max, c.z);
+    lowestPoint = detail::RotatePointXY(c, lowestPoint, phi);
+    return std::max(0.0, lowestPoint.y - Wave::Y(c.x, t));
 }
 constexpr bool ACV::Segment::IsFirstOrLast() const
 {
@@ -60,8 +65,9 @@ constexpr bool ACV::Segment::IsFirstOrLast() const
 ACV::ACV()
 {
     double const d_gap = 0.01; // высота зазора
-    W = S * (d_max +  d_gap);
-    c = {0, d_max * 3 / 4 +  d_gap, 0};
+    W = S * (d_max + d_gap);
+    c = {0, d_max + d_gap, 0};
+    // c = {0, 0.4, 0};
 
     p_qs = m * globals::g / S;
     p_damp = 0;
@@ -92,9 +98,9 @@ double D(double S_gap, double S)
 
 void ACV::Update(double dt)
 {
-    auto [_W, F_wave, M_contact, S_gap] = CalcSegmentsCharacteristics(c, V, w, phi, t);
+    auto const [_W, F_wave, M_contact, S_gap, V_y_wave] = CalcSegmentsCharacteristics(c, V, w, phi, t);
 
-    double dWdt = _W - W;
+    double const dW__dt = _W - W;
     W = _W;
 
     Q_in = Compressor::Q_in(p);
@@ -103,18 +109,19 @@ void ACV::Update(double dt)
     double const F_AC = p * S;
     double const F_damp = p_damp * S;
     double const F_attr = m * globals::g;
-    double dV_y__dt = (F_AC - F_attr + F_damp + F_wave) / m;
+    double const dV_y__dt = (F_AC - F_attr + F_damp + F_wave) / m;
+    double const V_damp = V.y - V_y_wave / dt;
 
-    double dp_qs__dt = globals::n * globals::p_a * (Q_in - Q_out - dWdt) / W;
+    double const dp_qs__dt = globals::n * globals::p_a * (Q_in - Q_out - dW__dt) / W;
     p_qs = Compressor::Clamp(p_qs + dp_qs__dt * dt);
-    p_damp = D(S_gap, S) * globals::rho_a * (-Q_in / S * V.y + 0.5 * SQ(V.y)) * S;
+    p_damp = D(S_gap, S) * globals::rho_a * (-Q_in / S * V_damp + 0.5 * SQ(V_damp)) * S;
 
-    double dw_z__dt = (p * S * l_AC - M_contact) / I_z;
+    double const dw_z__dt = (p * S * l_AC - M_contact) / I_z;
 
     V.y += dV_y__dt * dt;
     w.z += dw_z__dt * dt;
 
-    p = p_qs; // p_damp is not included
+    p = p_qs; // p_damp не включено
 
     c += V * dt;
     phi += w.z * dt;
@@ -124,25 +131,24 @@ void ACV::Update(double dt)
     gWriter.WriteRow(c.y, W, phi, p, Q_in, Q_out);
 }
 
-std::tuple<double, double, double, double> ACV::CalcSegmentsCharacteristics(
+ACV::ACVSummary ACV::CalcSegmentsCharacteristics(
     Vector const& new_c, 
     Vector const& new_V, 
     Vector const& new_w,
-    double phi,
+    double new_phi,
     double new_t
 )
 {
-    double _W = 0;
-    double _F_wave = 0;
-    double _M_contact = 0;
-    double _S_gap = 0;
-    for (size_t i = 0; i < N; ++i) {
-        segments[i].UpdateParams(new_c, new_V, new_w, phi, new_t);
-        _W += segments[i].W;
-        _F_wave += segments[i].F_contact;
-        _M_contact += segments[i].M_contact;
-        _S_gap += segments[i].S_gap;
+    ACVSummary result;
+    for (auto &segment : segments) {
+        segment.UpdateParams(new_c, new_V, new_w, new_phi, new_t);
+        result.W += segment.W;
+        result.F_wave += segment.F_contact;
+        result.M_contact += segment.M_contact;
+        result.S_gap += segment.S_gap;
+        result.V_y_wave += segment.V_y;
     }
-    return {_W, _F_wave, _M_contact, _S_gap};
+    result.V_y_wave /= N; // хотим вычислять среднее значение скорости
+    return result;
 }
 } // namespace phisics

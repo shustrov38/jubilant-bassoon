@@ -98,7 +98,7 @@ struct ACV {
     static double constexpr S = L * b; // площадь воздушной подушки
     static double constexpr I_z = 250000; // момент инерции судна
 
-    static double constexpr theta = 0.1; // параметр влияния волны на судно
+    static double constexpr theta = 0.01; // параметр влияния волны на судно
 
     static double constexpr V_x = 20; // постоянная скорость буксира
 
@@ -125,6 +125,11 @@ struct ACV {
 
         double S_gap; // ширина зазора в сегменте
 
+        double V_y; // вертикальная скорость волны
+
+        double phi; // тангаж
+
+        double t_prev; // время на предыдущем шаге
         double t; // текущее время
 
         Segment() = default;
@@ -143,6 +148,14 @@ struct ACV {
         constexpr double GapHeight() const;
 
         constexpr bool IsFirstOrLast() const;
+    };
+
+    struct ACVSummary {
+        double W = 0;
+        double F_wave = 0;
+        double M_contact = 0;
+        double S_gap = 0;
+        double V_y_wave = 0;
     };
 
     struct Compressor {
@@ -196,11 +209,11 @@ struct ACV {
 
     void Update(double dt);
 
-    std::tuple<double, double, double, double> CalcSegmentsCharacteristics(
+    ACVSummary CalcSegmentsCharacteristics(
         Vector const& new_c, 
         Vector const& new_V, 
         Vector const& new_w,
-        double phi,
+        double new_phi,
         double new_t
     );
 };
