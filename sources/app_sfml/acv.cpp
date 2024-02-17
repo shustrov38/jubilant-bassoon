@@ -42,7 +42,7 @@ ACV::~ACV()
 
 void ACV::Update(sf::Time deltaTime, sf::View &view)
 {
-    double const dt = 1e-5;
+    double const dt = 1e-6;
     phisics::ACV::Update(dt);
 
     double const phiDeg = ToDegrees(phi);
@@ -166,8 +166,8 @@ void ACV::RenderImGui()
     ImGui::Text(U8("Время с начала симуляции     %.3lf с"), t);
     ImGui::Text(U8("Вертикальная координата ц.т  %.3lf м"), c.y);
     ImGui::Text(U8("Вертикальная скорость судна  %.3lf м/с"), V.y);
+    ImGui::Text(U8("Перегрузка                   %.3lf"), dV_y__dt / phisics::globals::g);
     ImGui::End();
-
 }
 
 bool ACV::IsOnScreen(sf::Vector2f const& coord) const

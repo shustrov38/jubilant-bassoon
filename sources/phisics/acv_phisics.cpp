@@ -4,7 +4,7 @@ namespace options {
 DEFINE_OPTION(CSV_LOG)
 } // namespace options
 
-static csv::Writer<1000ul> gWriter(options::GET_OPTION(CSV_LOG).GetValue());
+static csv::Writer<0ul> gWriter(options::GET_OPTION(CSV_LOG).GetValue());
 
 namespace phisics {
 #define SQ(x) (x) * (x)
@@ -66,8 +66,8 @@ ACV::ACV()
 {
     double const d_gap = 0.01; // высота зазора
     W = S * (d_max + d_gap);
-    c = {0, d_max + d_gap, 0};
-    // c = {0, 0.4, 0};
+    // c = {0, d_max * 0.75, 0};
+    c = {0, 0.4, 0};
 
     p_qs = m * globals::g / S;
     p_damp = 0;
@@ -84,7 +84,7 @@ ACV::ACV()
         segments[i] = Segment(i + 1, W / N);
     }
 
-    gWriter.WriteRow("H", "W", "phi", "p", "Q_in", "Q_out");
+    gWriter.WriteRow("H", "dV_y/dt", "phi", "p", "Q_in", "Q_out");
 }
 
 double D(double S_gap, double S)
@@ -99,6 +99,8 @@ double D(double S_gap, double S)
 void ACV::Update(double dt)
 {
     auto const [_W, F_wave, M_contact, S_gap, V_y_wave] = CalcSegmentsCharacteristics(c, V, w, phi, t);
+    
+    double const V_damp = V.y - V_y_wave / dt;
 
     double const dW__dt = _W - W;
     W = _W;
@@ -109,8 +111,7 @@ void ACV::Update(double dt)
     double const F_AC = p * S;
     double const F_damp = p_damp * S;
     double const F_attr = m * globals::g;
-    double const dV_y__dt = (F_AC - F_attr + F_damp + F_wave) / m;
-    double const V_damp = V.y - V_y_wave / dt;
+    dV_y__dt = (F_AC - F_attr + F_damp + F_wave) / m;
 
     double const dp_qs__dt = globals::n * globals::p_a * (Q_in - Q_out - dW__dt) / W;
     p_qs = Compressor::Clamp(p_qs + dp_qs__dt * dt);
@@ -128,7 +129,7 @@ void ACV::Update(double dt)
 
     t += dt;
 
-    gWriter.WriteRow(c.y, W, phi, p, Q_in, Q_out);
+    gWriter.WriteRow(c.y, dV_y__dt, phi, p, Q_in, Q_out);
 }
 
 ACV::ACVSummary ACV::CalcSegmentsCharacteristics(

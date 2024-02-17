@@ -9,9 +9,9 @@ int main()
 
     double const eps = 1e-8;
 
-    double const dt = 1e-5;
+    double const dt = 1e-6;
     double const T_min = 0.0;
-    double const T_max = 600.0;
+    double const T_max = 200.0;
     assert(T_min < T_max);
 
     size_t const total = (T_max - T_min + dt - eps) / dt;

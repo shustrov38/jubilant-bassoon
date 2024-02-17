@@ -75,7 +75,7 @@ inline double constexpr rho_w = 1000.0; // плотность воды
 
 class Wave {
 public:
-    static double constexpr A = 0.4; // амплитуда волны
+    static double constexpr A = 0.6; // амплитуда волны
     static double constexpr h = 2 * A; // высота волны
     static double constexpr lambda = 20 * h; // длина волны
     static double constexpr k = Sqrt(2 * M_PI / lambda); // волновой вектор
@@ -98,11 +98,11 @@ struct ACV {
     static double constexpr S = L * b; // площадь воздушной подушки
     static double constexpr I_z = 250000; // момент инерции судна
 
-    static double constexpr theta = 0.01; // параметр влияния волны на судно
+    static double constexpr theta = 1; // параметр влияния волны на судно
 
     static double constexpr V_x = 20; // постоянная скорость буксира
 
-    static int    constexpr N = 100; // количество сечений ВП
+    static int    constexpr N = 80; // количество сечений ВП
     static double constexpr delta_L = L / N; // ширина сечения ВП
 
     struct Segment {
@@ -197,6 +197,7 @@ struct ACV {
     
     double phi; // тангаж
 
+    double dV_y__dt; // вертикальное ускорение
     Vector V; // вектор скорости
     Vector w; // вектор угловой скорости
 
