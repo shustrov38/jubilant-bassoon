@@ -14,4 +14,4 @@ set(COMMON_DIR ${CMAKE_CURRENT_LIST_DIR}/common)
 set(PHISICS_DIR ${CMAKE_CURRENT_LIST_DIR}/phisics)
 
 add_subdirectory(app_cli)
-add_subdirectory(app_sfml)
+# add_subdirectory(app_sfml)

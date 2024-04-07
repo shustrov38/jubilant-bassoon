@@ -1,17 +1,20 @@
 #include <cassert>
 
-#include "acv_phisics.h"
+#include "constants.h"
+#include "acv.h"
 #include "tqdm.h"
 
 int main()
 {
-    phisics::ACV acv;
+    phisics::acv::ACV acv;
+    acv.Init();
 
     double const eps = 1e-8;
 
-    double const dt = 1e-6;
+
+    double const dt = phisics::globals::dt;
     double const T_min = 0.0;
-    double const T_max = 200.0;
+    double const T_max = 100.0;
     assert(T_min < T_max);
 
     size_t const total = (T_max - T_min + dt - eps) / dt;
