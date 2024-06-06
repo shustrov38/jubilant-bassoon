@@ -29,24 +29,24 @@ inline Double constexpr rho_w = 1000.0;
 inline Double constexpr eps = 1e-7;
 
 // шаг времени симуляции
-inline Double constexpr dt = 1e-6;
+inline Double constexpr dt = 1e-7;
 } // namespace globals
 
 namespace wave {
 // амплитуда волны
-inline Double constexpr A = 0.6;
+inline Double constexpr A = 0.5;
 
 // высота волны
 inline Double constexpr h = 2 * A;
 
 // длина волны
-inline Double constexpr lambda = 20 * h;
+inline Double constexpr lambda = 10 * h;
 
 // волновой вектор
-inline Double constexpr k = utils::Sqrt(2 * M_PI / lambda);
+inline Double constexpr k = 2 * M_PI / lambda;
 
 // скорость волны
-inline Double constexpr c = utils::Sqrt(h / k);
+inline Double constexpr c = utils::Sqrt(globals::g / k);
 
 // циклическая частота
 inline Double constexpr omega = c * k;
@@ -75,7 +75,7 @@ inline Double constexpr S = L * b;
 inline Double constexpr I_z = 250000;
 
 // параметр влияния волны на судно
-inline Double constexpr theta = 1;
+inline Double constexpr theta = 0.005;
 
 // постоянная скорость буксира
 inline Double constexpr V_x = 20;

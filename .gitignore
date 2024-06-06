@@ -9,6 +9,8 @@ paper/*
 !paper/*.tex
 !paper/*.pdf
 
+paper/project_proposal*
+
 # build files
 build
 _build

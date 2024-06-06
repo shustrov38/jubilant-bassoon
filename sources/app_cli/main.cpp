@@ -11,10 +11,9 @@ int main()
 
     double const eps = 1e-8;
 
-
     double const dt = phisics::globals::dt;
     double const T_min = 0.0;
-    double const T_max = 100.0;
+    double const T_max = 10.0;
     assert(T_min < T_max);
 
     size_t const total = (T_max - T_min + dt - eps) / dt;

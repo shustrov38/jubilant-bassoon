@@ -1,0 +1,123 @@
+\documentclass[a4paper,14pt]{extarticle}
+\usepackage{graphicx}
+
+\usepackage[left=30mm, right=10mm, top=20mm, bottom=20mm]{geometry}
+\linespread{1.3} 
+
+\usepackage{cmap}%
+\usepackage[T1,T2A]{fontenc}%
+\usepackage[utf8]{inputenc}%
+\usepackage{csquotes}%
+\usepackage[russian]{babel}%
+
+\usepackage{fontspec} 
+\defaultfontfeatures{Ligatures={TeX},Renderer=Basic} 
+\setmainfont[Ligatures={TeX,Historic}]{Times New Roman}
+
+\usepackage{amsmath, amsfonts, amssymb, mathtools, systeme}%
+\usepackage{graphicx, float}%
+\usepackage{caption}%
+\usepackage{setspace}%
+\usepackage{array}%
+\usepackage{booktabs}%
+\usepackage{wrapfig}%
+\usepackage{ragged2e}%
+
+\usepackage{tikz}%
+\usepackage{pgfplots}%
+\usetikzlibrary{pgfplots.groupplots}%
+\pgfplotsset{compat=1.3}%
+
+\captionsetup{labelfont=bf}
+\captionsetup{justification=centering}
+
+\newtheorem{definition}{Определение}[section]
+\newtheorem{theorem}{Теорема}[section]
+\newtheorem{example}{Пример}[section]
+\newtheorem{lemma}{Лемма}[section]
+
+\def\ci{\perp\!\!\!\perp}
+
+\pagestyle{myheadings}
+
+\usepackage{hyperref}
+\hypersetup{pdfstartview={XYZ null null 1.00}}
+
+\bibliographystyle{gost-numeric.bbx}
+\usepackage[
+    parentracker=true,
+    backend=biber,
+    bibstyle=gost-numeric,
+    citestyle=gost-numeric,
+    hyperref=true,
+    bibencoding=utf8,
+    language=auto,
+    autolang=other,
+    defernumbers=false,
+    doi=false,
+    eprint=false,
+    isbn=false,
+    dashed=false,
+    url=false
+]{biblatex} 
+\addbibresource{bibliography.bib}
+\usepackage{bibentry}
+
+% вычисление значения в точке
+\newcommand\at[2]{\left.#1\right|_{#2}}
+
+\let\oldsection\section% Store \section
+\renewcommand{\section}{% Update \section
+  \renewcommand{\theequation}{\thesection.\arabic{equation}}% Update equation number
+  \oldsection}% Regular \section
+\let\oldsubsection\subsection% Store \subsection
+\renewcommand{\subsection}{% Update \subsection
+  \renewcommand{\theequation}{\thesubsection.\arabic{equation}}% Update equation number
+  \oldsubsection}% Regular \subsection
+  
+\begin{document}
+
+\input{title}
+\newpage
+\pagestyle{myheadings}
+
+\tableofcontents
+
+\newpage
+\input{introduction.tex}
+
+\setcounter{section}{1}
+\addtocounter{section}{-1}
+
+\newpage
+\begin{centering}
+  \section{Построение математической модели СВП}
+\end{centering}
+
+\input{fan_performance.tex}
+
+\input{pressure.tex}
+
+\input{acv_dynamics.tex}
+
+\input{wave.tex}
+
+\input{wave_interaction.tex}
+
+\newpage
+\begin{centering}
+    \section{Интегрирование уравнений динамики}
+\end{centering}
+
+\input{simulation.tex}
+
+\input{experiments.tex}
+
+\newpage
+\input{conclusion.tex}
+
+\newpage
+\addcontentsline{toc}{section}{Список литературы}
+\printbibliography
+
+\end{document}

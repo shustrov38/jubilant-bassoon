@@ -63,10 +63,10 @@ void ACV::Init()
     // стартовая высота зазора в 5 мм
     Double const d_gap = 0.005;
 
-    // судно находится на максимальной высоте
-    c = {0, d_max + d_gap, 0};
-    W = S * c.y;
+    Double fraction = 0.5;
 
+    c = {0, fraction * d_max + d_gap, 0};
+    W = S * c.y;
 
     p_qs = m * globals::g / S;
     p_damp = 0;
@@ -125,6 +125,8 @@ void ACV::Update(Double dt)
 
     c += V * dt;
     phi += w.z * dt;
+
+    phi = std::clamp(phi, -0.174533, 0.174533);
 
     if (iteration == options::period) [[unlikely]] {
         gWriter.WriteRow(c.y, dV_y__dt, phi, p, Q_in, Q_out);
